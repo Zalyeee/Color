@@ -2,54 +2,97 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Círculo Cromático Interativo</title>
+<title>Círculo Cromático Pro</title>
 
 <style>
-* {
-    box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
     margin: 0;
     background: black;
     color: white;
     font-family: Arial, sans-serif;
-    text-align: center;
+    overflow: hidden;
 }
 
-h1 {
-    margin-top: 20px;
+/* ====== PÁGINAS ====== */
+.page {
+    position: absolute;
+    inset: 0;
+    display: none;
+    padding: 20px;
 }
 
-.container {
+.page.active {
+    display: block;
+}
+
+/* ====== FUNDO ANIMADO ====== */
+#bg {
+    position: fixed;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    filter: blur(40px) brightness(0.5);
+    transform: scale(1.2);
+    animation: zoom 10s ease-in-out infinite alternate;
+    z-index: -1;
+}
+
+@keyframes zoom {
+    from { transform: scale(1.2); }
+    to   { transform: scale(1.35); }
+}
+
+/* ====== CÍRCULO ====== */
+.wheel-wrap {
     display: flex;
-    flex-wrap: wrap;
     justify-content: center;
-    gap: 40px;
-    margin-top: 30px;
+    margin-top: 40px;
 }
 
-/* 🔵 CÍRCULO */
-.wheel-container {
-    background: black;
-    border-radius: 50%;
-}
-
-#wheel {
+.wheel {
     width: 280px;
+    height: 280px;
+    border-radius: 50%;
+    background: linear-gradient(
+        red, yellow, lime, cyan, blue, magenta, red
+    );
     cursor: pointer;
-    mix-blend-mode: screen; /* REMOVE O FUNDO BRANCO */
+
+    -webkit-mask: url("color-wheel.png") center/contain no-repeat;
+    mask: url("color-wheel.png") center/contain no-repeat;
+
+    animation: spin 30s linear infinite;
+    box-shadow:
+        0 0 20px rgba(255,255,255,.3),
+        0 0 60px rgba(255,255,255,.15);
 }
 
-/* 🖼️ PREVIEW */
+@keyframes spin {
+    from { rotate: 0deg; }
+    to   { rotate: 360deg; }
+}
+
+/* ====== BOLINHA ====== */
+.handle {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 0 10px white;
+    pointer-events: none;
+}
+
+/* ====== PREVIEW ====== */
 #preview {
-    width: 300px;
-    height: 300px;
-    background: #000;
-    border-radius: 12px;
+    width: 260px;
+    height: 260px;
+    margin: 30px auto;
+    border-radius: 14px;
     overflow: hidden;
     position: relative;
-    border: 1px solid #333;
 }
 
 #preview img {
@@ -58,133 +101,138 @@ h1 {
     object-fit: cover;
     position: absolute;
     opacity: 0;
-    transition: opacity 0.6s ease;
+    transform: scale(1.1);
+    transition: opacity .6s ease, transform .6s ease;
 }
 
 #preview img.active {
     opacity: 1;
+    transform: scale(1);
 }
 
-/* 📷 INPUTS */
+/* ====== PICKER ====== */
 .inputs {
-    margin: 40px auto;
-    max-width: 700px;
+    max-width: 500px;
+    margin: auto;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 15px;
+    gap: 10px;
 }
 
 label {
-    font-size: 14px;
     background: #111;
-    padding: 10px;
-    border-radius: 8px;
+    padding: 12px;
+    border-radius: 10px;
     border: 1px solid #333;
-    cursor: pointer;
 }
 
-input[type="file"] {
-    margin-top: 6px;
-    width: 100%;
+/* ====== BOTÃO ====== */
+button {
+    margin-top: 20px;
+    padding: 12px;
+    background: white;
+    border: none;
+    border-radius: 20px;
+    font-weight: bold;
 }
 </style>
 </head>
 
 <body>
 
-<h1>🎨 Círculo Cromático</h1>
-<p>Clique no círculo para trocar a imagem</p>
+<div id="bg"></div>
 
-<div class="container">
-    <div class="wheel-container">
-        <img id="wheel" src="color-wheel.png" alt="Círculo Cromático">
+<!-- ====== PÁGINA 1 ====== -->
+<div class="page active" id="page-picker">
+    <h2>📷 Escolha as imagens</h2>
+
+    <div class="inputs">
+        <label>Vermelho <input type="file" data-c="vermelho"></label>
+        <label>Amarelo <input type="file" data-c="amarelo"></label>
+        <label>Verde <input type="file" data-c="verde"></label>
+        <label>Ciano <input type="file" data-c="ciano"></label>
+        <label>Azul <input type="file" data-c="azul"></label>
+        <label>Roxo <input type="file" data-c="roxo"></label>
     </div>
 
-    <div id="preview">
-        <span style="opacity:0.4;line-height:300px;">Imagem aqui</span>
-    </div>
+    <button onclick="start()">Ir para o círculo</button>
 </div>
 
-<h2>📷 Escolha as imagens</h2>
+<!-- ====== PÁGINA 2 ====== -->
+<div class="page" id="page-wheel">
+    <div class="wheel-wrap" id="wrap">
+        <div class="wheel" id="wheel"></div>
+        <div class="handle" id="handle"></div>
+    </div>
 
-<div class="inputs">
-    <label>Vermelho
-        <input type="file" accept="image/*" data-color="vermelho">
-    </label>
-    <label>Amarelo
-        <input type="file" accept="image/*" data-color="amarelo">
-    </label>
-    <label>Verde
-        <input type="file" accept="image/*" data-color="verde">
-    </label>
-    <label>Ciano
-        <input type="file" accept="image/*" data-color="ciano">
-    </label>
-    <label>Azul
-        <input type="file" accept="image/*" data-color="azul">
-    </label>
-    <label>Roxo
-        <input type="file" accept="image/*" data-color="roxo">
-    </label>
+    <div id="preview"></div>
 </div>
 
 <script>
-const wheel = document.getElementById("wheel");
-const preview = document.getElementById("preview");
-const inputs = document.querySelectorAll("input[type=file]");
-
 const imagens = {};
-let imagemAtual = null;
+const bg = document.getElementById("bg");
+const preview = document.getElementById("preview");
+const handle = document.getElementById("handle");
+const wrap = document.getElementById("wrap");
 
-// Carregar imagens escolhidas
-inputs.forEach(input => {
-    input.addEventListener("change", () => {
-        const file = input.files[0];
-        if (!file) return;
+let atual = null;
 
-        const reader = new FileReader();
-        reader.onload = () => {
-            imagens[input.dataset.color] = reader.result;
-        };
-        reader.readAsDataURL(file);
-    });
+// carregar imagens
+document.querySelectorAll("input").forEach(i => {
+    i.onchange = () => {
+        const r = new FileReader();
+        r.onload = () => imagens[i.dataset.c] = r.result;
+        r.readAsDataURL(i.files[0]);
+    };
 });
 
-// Clique no círculo
-wheel.addEventListener("click", (e) => {
-    const rect = wheel.getBoundingClientRect();
-    const x = e.clientX - rect.left - rect.width / 2;
-    const y = e.clientY - rect.top - rect.height / 2;
+function start() {
+    document.getElementById("page-picker").classList.remove("active");
+    document.getElementById("page-wheel").classList.add("active");
+}
 
-    let angle = Math.atan2(y, x) * (180 / Math.PI);
-    angle = (angle + 360) % 360;
+// lógica do círculo
+wrap.onpointermove = e => {
+    const r = wrap.getBoundingClientRect();
+    const cx = r.left + r.width/2;
+    const cy = r.top + r.height/2;
 
-    let cor = "";
+    const dx = e.clientX - cx;
+    const dy = e.clientY - cy;
+    const dist = Math.hypot(dx, dy);
 
-    if (angle >= 330 || angle < 30) cor = "vermelho";
-    else if (angle >= 30 && angle < 90) cor = "amarelo";
-    else if (angle >= 90 && angle < 150) cor = "verde";
-    else if (angle >= 150 && angle < 210) cor = "ciano";
-    else if (angle >= 210 && angle < 270) cor = "azul";
-    else if (angle >= 270 && angle < 330) cor = "roxo";
+    if (dist < 90 || dist > 140) return; // só o anel
+
+    const ang = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+
+    const x = Math.cos(ang * Math.PI/180) * 140;
+    const y = Math.sin(ang * Math.PI/180) * 140;
+
+    handle.style.left = cx + x - 7 + "px";
+    handle.style.top  = cy + y - 7 + "px";
+
+    let cor =
+        ang < 30 || ang >= 330 ? "vermelho" :
+        ang < 90 ? "amarelo" :
+        ang < 150 ? "verde" :
+        ang < 210 ? "ciano" :
+        ang < 270 ? "azul" :
+        "roxo";
 
     if (!imagens[cor]) return;
 
     const img = document.createElement("img");
     img.src = imagens[cor];
     preview.appendChild(img);
+    bg.style.backgroundImage = `url(${imagens[cor]})`;
 
-    requestAnimationFrame(() => {
-        img.classList.add("active");
-    });
+    requestAnimationFrame(() => img.classList.add("active"));
 
-    if (imagemAtual) {
-        imagemAtual.classList.remove("active");
-        setTimeout(() => imagemAtual.remove(), 600);
+    if (atual) {
+        atual.classList.remove("active");
+        setTimeout(() => atual.remove(), 600);
     }
-
-    imagemAtual = img;
-});
+    atual = img;
+};
 </script>
 
 </body>
